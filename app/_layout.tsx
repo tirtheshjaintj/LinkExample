@@ -1,24 +1,53 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
+import React, { useEffect, useState } from 'react';
+import { Modal, NativeEventEmitter, NativeModules, Text, TouchableOpacity, View } from 'react-native';
 
-import { useColorScheme } from '@/hooks/use-color-scheme';
+export default function ScamAlertListener() {
+  const [scamUrl, setScamUrl] = useState<string | null>(null);
 
-export const unstable_settings = {
-  anchor: '(tabs)',
-};
+  useEffect(() => {
+    // ✅ Correct emitter source
+    const eventEmitter = new NativeEventEmitter(NativeModules.DeviceEventManagerModule);
+    const sub = eventEmitter.addListener('ScamUrlDetected', (data) => {
+      console.log('🚨 Scam URL Detected:', data);
+      setScamUrl(data.url);
+    });
 
-export default function RootLayout() {
-  const colorScheme = useColorScheme();
+    return () => sub.remove();
+  }, []);
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <Modal visible={!!scamUrl} transparent animationType="fade">
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: 'rgba(0,0,0,0.6)',
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}>
+        <View
+          style={{
+            backgroundColor: '#fff',
+            padding: 20,
+            borderRadius: 12,
+            width: '80%',
+            alignItems: 'center',
+          }}>
+          <Text style={{ fontSize: 18, fontWeight: 'bold', color: 'red', marginBottom: 10 }}>
+            ⚠️ Scam URL Detected!
+          </Text>
+          <Text style={{ textAlign: 'center', marginBottom: 20 }}>{scamUrl}</Text>
+          <TouchableOpacity
+            onPress={() => setScamUrl(null)}
+            style={{
+              backgroundColor: '#f33',
+              paddingHorizontal: 20,
+              paddingVertical: 10,
+              borderRadius: 8,
+            }}>
+            <Text style={{ color: '#fff', fontWeight: '600' }}>Dismiss</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
   );
 }
